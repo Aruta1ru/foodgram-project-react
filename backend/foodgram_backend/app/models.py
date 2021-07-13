@@ -7,11 +7,17 @@ class Ingredient(models.Model):
     name = models.CharField(max_length=200)
     measurement_unit = models.CharField(max_length=20)
 
+    def __str__(self):
+        return f'{self.name}, {self.measurement_unit}'
+
 
 class Tag(models.Model):
     name = models.CharField(max_length=200, unique=True)
     color = models.CharField(max_length=7, default='#FFFFFF', unique=True)
     slug = models.SlugField(unique=True)
+
+    def __str__(self):
+        return self.name
 
 
 class Recipe(models.Model):
@@ -23,7 +29,7 @@ class Recipe(models.Model):
     name = models.CharField(max_length=200)
     text = models.TextField()
     cooking_time = models.PositiveIntegerField()
-    image = models.ImageField(upload_to='media/')
+    image = models.ImageField(upload_to='recipe_pic/')
     ingredients = models.ManyToManyField(
         Ingredient,
         through='RecipeIngredient',
@@ -37,17 +43,23 @@ class Recipe(models.Model):
         related_name='tags'
     )
 
-    def is_favorite(self, request):
-        return True if Favorite.objects.filter(
+    def is_favorited(self, request):
+        return Favorite.objects.filter(
             user=request.user,
             recipe=self
-        ).count() > 0 else False
+        ).exists()
 
     def is_in_shopping_cart(self, request):
-        return True if ShoppingCart.objects.filter(
+        return ShoppingCart.objects.filter(
             user=request.user,
             recipe=self
-        ).count() > 0 else False
+        ).exists()
+
+    def favorite_count(self):
+        return Favorite.objects.filter(recipe=self).count()
+
+    def __str__(self):
+        return self.name
 
 
 class RecipeIngredient(models.Model):

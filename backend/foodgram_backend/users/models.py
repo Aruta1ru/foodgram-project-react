@@ -66,10 +66,13 @@ class CustomUser(AbstractUser):
         return self.role == self.USER
 
     def is_subscribed(self, user):
-        return True if Follow.objects.filter(
+        return Follow.objects.filter(
             user=user,
             author=self
-        ).count() > 0 else False
+        ).exists()
+
+    def recipes_count(self, user):
+        return user.recipes.count()
 
 
 class Follow(models.Model):

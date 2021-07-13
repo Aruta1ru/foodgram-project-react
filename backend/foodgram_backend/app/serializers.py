@@ -1,8 +1,21 @@
 import base64
+import uuid
 
+from django.core.files.base import ContentFile
 from rest_framework import serializers
 
-from .models import Ingredient, Recipe, RecipeIngredient, Tag, RecipeTag
+from app.models import Ingredient, Recipe, RecipeIngredient, Tag, RecipeTag
+from users.serializers import UserSerializer 
+
+
+class Base64ImageField(serializers.ImageField):
+    def to_internal_value(self, data):
+        if isinstance(data, str) and data.startswith('data:image'):
+            format, imgstr = data.split(';base64,')
+            ext = format.split('/')[-1]
+            id = uuid.uuid4()
+            data = ContentFile(base64.b64decode(imgstr), name = id.urn[9:] + '.' + ext)
+        return super(Base64ImageField, self).to_internal_value(data)
 
 
 class IngredientSerializer(serializers.ModelSerializer):
@@ -12,89 +25,73 @@ class IngredientSerializer(serializers.ModelSerializer):
         model = Ingredient
 
 
-class RecipeIngredientSerializer(serializers.ModelSerializer):
-    amount = serializers.IntegerField()
-
-    class Meta:
-        fields = ('name', 'measurement_unit', 'amount')
-        model = Ingredient
-
-
-class RecipeCommonSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        fields = ('id', 'name', 'image', 'cooking_time')
-        model = Recipe
+class RecipeIngredientSerializer(serializers.Serializer):
+    id = serializers.IntegerField(source='ingredient.id')
+    name = serializers.CharField(read_only=True, source='ingredient.name')
+    measurement_unit = serializers.CharField(read_only=True, source='ingredient.measurement_unit')
+    amount = serializers.IntegerField(read_only=True)
 
 
 class TagSerializer(serializers.ModelSerializer):
 
     class Meta:
-        fields = ('author',)
+        fields = ('id', 'name', 'color', 'slug')
         model = Tag
 
 
 class RecipeSerializer(serializers.ModelSerializer):
-    ingredients = RecipeIngredientSerializer(many=True)
-    tags = TagSerializer(many=True)
+    author = UserSerializer(required=False)
+    ingredients = serializers.SerializerMethodField('get_ingredients')
+    tags = TagSerializer(many=True, read_only=True)
     is_favorited = serializers.SerializerMethodField('favorited_recipe')
     is_in_shopping_cart = serializers.SerializerMethodField('in_shopping_cart')
+    image = Base64ImageField()
+
+    def get_ingredients(self, obj):
+        query = RecipeIngredient.objects.filter(recipe=obj)
+        return RecipeIngredientSerializer(instance=query, many=True).data
 
     def favorited_recipe(self, recipe):
-        return recipe.is_favorite()
+        request = self.context.get("request")
+        return recipe.is_favorited(request)
 
     def in_shopping_cart(self, recipe):
-        return recipe.is_in_shopping_cart()
+        request = self.context.get("request")
+        return recipe.is_in_shopping_cart(request)
 
     def create(self, validated_data):
-        ingredients_data = validated_data.pop('ingredients')
-        tags_data = validated_data.pop('tags')
+        request = self.context.get("request")
+        ingredients_data = request.data['ingredients']
+        tags_data = request.data['tags']
         recipe = Recipe.objects.create(**validated_data)
         for ingredient_data in ingredients_data:
-            RecipeIngredient.objects.create(recipe=recipe, **ingredient_data)
-        for tag_data in tags_data:
-            RecipeTag.objects.create(recipe=recipe, **tag_data)
-        return 
+            ingredient = Ingredient.objects.get(id=ingredient_data['id'])
+            amount = ingredient_data['amount']
+            RecipeIngredient.objects.create(recipe=recipe, ingredient=ingredient, amount=amount)
+        for tag_id in tags_data:
+            tag = Tag.objects.get(id=tag_id)
+            RecipeTag.objects.create(recipe=recipe, tag=tag)
+        return recipe
         
     def update(self, instance, validated_data):
-        ingredients_data = validated_data.pop('ingredients')
-        tags_data = validated_data.pop('tags')
-        instance = validated_data
+        request = self.context.get("request")
+        ingredients_data = request.data['ingredients']
+        tags_data = request.data['tags']
+        instance.name = validated_data.get('name', instance.name)
+        instance.text = validated_data.get('text', instance.text)
+        instance.cooking_time = validated_data.get('cooking_time', instance.cooking_time)
+        instance.image = validated_data.get('image', instance.image)
+        instance.save()
         RecipeIngredient.objects.filter(recipe=instance).delete()
         RecipeTag.objects.filter(recipe=instance).delete()
         for ingredient_data in ingredients_data:
-            RecipeIngredient.objects.create(recipe=instance, **ingredient_data)
-        for tag_data in tags_data:
-            RecipeTag.objects.create(recipe=instance, **tag_data)
+            ingredient = Ingredient.objects.get(id=ingredient_data['id'])
+            amount = ingredient_data['amount']
+            RecipeIngredient.objects.create(recipe=instance, ingredient=ingredient, amount=amount)
+        for tag_id in tags_data:
+            tag = Tag.objects.get(id=tag_id)
+            RecipeTag.objects.create(recipe=instance, tag=tag)
         return instance
-
-    def to_internal_value(self, data):
-        id = data.get('id')
-        name = data.get('name')
-        text = data.get('text')
-        cooking_time = data.get('cooking_time')
-        author = data.get('author')
-        ingredients = data.get('ingredients')
-        tags = data.get('tags')
-        is_favorite = data.get('is_favorite')
-        is_in_shopping_cart = data.get('is_in_shopping_cart')
-        image = data.get('image')
-
-        with open(image, 'rb') as img_file:
-            b64_string = base64.b64encode(img_file.read())
-        
-        return {
-            'id': id,
-            'name': name,
-            'text': text,
-            'cooking_time': cooking_time,
-            'author': author,
-            'ingredients': ingredients,
-            'tags': tags,
-            'is_favorite': is_favorite,
-            'is_in_shopping_cart': is_in_shopping_cart,
-            'image': b64_string,            
-        }
 
 
     class Meta:

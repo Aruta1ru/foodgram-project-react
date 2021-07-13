@@ -7,7 +7,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import CustomUser, Follow
-from .serializers import UserSerializer, PasswordChangeSerializer
+from .serializers import UserSerializer, PasswordChangeSerializer, SubscribedUserSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -45,12 +45,14 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(['get'], detail=False, permission_classes=[IsAuthenticated])
     def subscriptions(self, request):
-        subscriptions = request.user.follower.all()
-        authors = []
-        for follow in subscriptions:
-            authors.append(follow.author)
-        serializer = UserSerializer(authors, many=True, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        subscriptions = request.user.follower.all().values_list('author')
+        queryset = CustomUser.objects.filter(id__in=subscriptions)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True, context={'request': request})
+            return self.get_paginated_response(serializer.data)
+        serializer = SubscribedUserSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
 
     
 @api_view(['GET', 'DELETE'])
@@ -59,13 +61,13 @@ def subscribe(request, id):
     if request.method == 'GET':
         author = get_object_or_404(CustomUser, id=id)
         if request.user != author:
-            if Follow.objects.filter(user=request.user,
+            if not Follow.objects.filter(user=request.user,
                                      author=author
-            ).count() == 0:
+            ).exists():
                 Follow.objects.create(user=request.user,
                                       author=author)
                 author = get_object_or_404(CustomUser, id=id)
-                serializer = UserSerializer(author, context={'request': request})
+                serializer = SubscribedUserSerializer(author, context={'request': request})
                 return Response(serializer.data,
                                 status=status.HTTP_201_CREATED)
             return Response({'errors': 'Вы уже подписаны на этого автора!'},
@@ -74,9 +76,9 @@ def subscribe(request, id):
                         status=status.HTTP_400_BAD_REQUEST)
     if request.method == 'DELETE':
         author=get_object_or_404(CustomUser, id=id)
-        if Follow.objects.filter(user=request.user,
+        if not Follow.objects.filter(user=request.user,
                                  author=author
-        ).count() > 0:        
+        ).exists():        
             Follow.objects.filter(
                 user=request.user,
                 author=author
