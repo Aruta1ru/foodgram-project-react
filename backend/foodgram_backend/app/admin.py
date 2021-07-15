@@ -1,6 +1,8 @@
 from django.contrib import admin
+from django.db.models import Count
 
-from .models import Ingredient, RecipeIngredient, RecipeTag, Tag, Recipe, Favorite, ShoppingCart
+from .models import (Favorite, Ingredient, Recipe, RecipeIngredient, RecipeTag,
+                     ShoppingCart, Tag)
 
 
 class IngredientAdmin(admin.ModelAdmin):
@@ -23,9 +25,17 @@ class TagInlineAdmin(admin.TabularInline):
 
 
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'author')
+    list_display = ('name', 'author', 'favorite_count')
     search_fields = ('name', 'author', 'tags')
     inlines = [IngredientInlineAdmin, TagInlineAdmin]
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(favorite_count=Count('favorited'))
+
+    @staticmethod
+    def get_favorite_count(obj):
+        return obj.favorite_count
 
 
 class RecipeIngredientAdmin(admin.ModelAdmin):

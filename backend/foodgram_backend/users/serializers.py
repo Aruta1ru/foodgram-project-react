@@ -1,8 +1,6 @@
-from django.http import request
-from rest_framework import serializers
-
-from users.models import CustomUser, Follow
 from app.models import Recipe
+from rest_framework import serializers
+from users.models import CustomUser
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -12,7 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
         user = None
         request = self.context.get("request")
         if request and hasattr(request, "user"):
-            user = request.user     
+            user = request.user
         return author.is_subscribed(user)
 
     class Meta:
@@ -38,20 +36,20 @@ class SubscribedUserSerializer(serializers.ModelSerializer):
         user = None
         request = self.context.get("request")
         if request and hasattr(request, "user"):
-            user = request.user     
+            user = request.user
         return author.is_subscribed(user)
 
     def get_recipes_count(self, author):
         user = None
         request = self.context.get("request")
         if request and hasattr(request, "user"):
-            user = request.user     
+            user = request.user
         return author.recipes_count(user)
-
 
     class Meta:
         fields = ('id', 'first_name', 'last_name',
-                  'username', 'email', 'is_subscribed', 'recipes', 'recipes_count')
+                  'username', 'email', 'is_subscribed',
+                  'recipes', 'recipes_count')
         model = CustomUser
 
 

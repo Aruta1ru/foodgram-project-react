@@ -6,22 +6,23 @@ class CustomAccountManager(BaseUserManager):
 
     def create_user(self, username, email, password, first_name, last_name):
         user = self.model(
-        	username=username, 
-			email=self.normalize_email(email),
-			first_name=first_name,
-			last_name=last_name,
-		)
+            username=username,
+            email=self.normalize_email(email),
+            first_name=first_name,
+            last_name=last_name,
+        )
         user.set_password(password)
         user.save()
         return user
 
-    def create_superuser(self, username, email, password, first_name, last_name):
+    def create_superuser(self, username, email,
+                         password, first_name, last_name):
         user = self.model(
-        	username=username, 
-			email=self.normalize_email(email),
-			first_name=first_name,
-			last_name=last_name,
-		)
+            username=username,
+            email=self.normalize_email(email),
+            first_name=first_name,
+            last_name=last_name,
+        )
         user.set_password(password)
         user.is_superuser = True
         user.is_verified = True

@@ -130,3 +130,11 @@ dmypy.json
 
 # .idea
 .idea
+
+/frontend/node_modules
+/backend/foodgram_backend/media
+backend/foodgram_backend/app/DejaVuSerifCondensed.cw127.pkl
+backend/foodgram_backend/app/DejaVuSerifCondensed.pkl
+backend/.mode
+backend/foodgram_backend/DejaVuSerifCondensed.cw127.pkl
+backend/foodgram_backend/DejaVuSerifCondensed.pkl

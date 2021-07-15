@@ -1,13 +1,13 @@
-from rest_framework import status, viewsets, mixins
 from django.shortcuts import get_object_or_404
-from rest_framework import pagination
+from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import CustomUser, Follow
-from .serializers import UserSerializer, PasswordChangeSerializer, SubscribedUserSerializer
+from .serializers import (PasswordChangeSerializer, SubscribedUserSerializer,
+                          UserSerializer)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -49,25 +49,37 @@ class UserViewSet(viewsets.ModelViewSet):
         queryset = CustomUser.objects.filter(id__in=subscriptions)
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = self.get_serializer(page, many=True, context={'request': request})
+            serializer = SubscribedUserSerializer(
+                page,
+                many=True,
+                context={'request': request}
+            )
             return self.get_paginated_response(serializer.data)
-        serializer = SubscribedUserSerializer(queryset, many=True, context={'request': request})
+        serializer = SubscribedUserSerializer(
+            queryset,
+            many=True,
+            context={'request': request}
+        )
         return Response(serializer.data)
 
-    
+
 @api_view(['GET', 'DELETE'])
-@permission_classes([IsAuthenticated])    
+@permission_classes([IsAuthenticated])
 def subscribe(request, id):
     if request.method == 'GET':
         author = get_object_or_404(CustomUser, id=id)
         if request.user != author:
-            if not Follow.objects.filter(user=request.user,
-                                     author=author
+            if not Follow.objects.filter(
+                user=request.user,
+                author=author
             ).exists():
                 Follow.objects.create(user=request.user,
                                       author=author)
                 author = get_object_or_404(CustomUser, id=id)
-                serializer = SubscribedUserSerializer(author, context={'request': request})
+                serializer = SubscribedUserSerializer(
+                    author,
+                    context={'request': request}
+                )
                 return Response(serializer.data,
                                 status=status.HTTP_201_CREATED)
             return Response({'errors': 'Вы уже подписаны на этого автора!'},
@@ -75,10 +87,11 @@ def subscribe(request, id):
         return Response({'errors': 'Нельзя подписаться на самого себя!'},
                         status=status.HTTP_400_BAD_REQUEST)
     if request.method == 'DELETE':
-        author=get_object_or_404(CustomUser, id=id)
-        if not Follow.objects.filter(user=request.user,
-                                 author=author
-        ).exists():        
+        author = get_object_or_404(CustomUser, id=id)
+        if not Follow.objects.filter(
+            user=request.user,
+            author=author
+        ).exists():
             Follow.objects.filter(
                 user=request.user,
                 author=author

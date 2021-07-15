@@ -1,5 +1,4 @@
 from django.db import models
-
 from users.models import CustomUser
 
 
@@ -42,6 +41,7 @@ class Recipe(models.Model):
         through_fields=('recipe', 'tag'),
         related_name='tags'
     )
+    pub_date = models.DateTimeField(auto_now_add=True)
 
     def is_favorited(self, request):
         return Favorite.objects.filter(
@@ -61,6 +61,9 @@ class Recipe(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        ordering = ['-pub_date']
+
 
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
@@ -76,10 +79,10 @@ class RecipeTag(models.Model):
 class Favorite(models.Model):
     user = models.ForeignKey(CustomUser,
                              on_delete=models.CASCADE,
-                             related_name="favorite")
+                             related_name="favorited")
     recipe = models.ForeignKey(Recipe,
                                on_delete=models.CASCADE,
-                               related_name="favorite")
+                               related_name="favorited")
 
     class Meta:
         constraints = [
