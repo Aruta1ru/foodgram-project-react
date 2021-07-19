@@ -1,35 +1,37 @@
+from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.serializers import Serializer
 
-from .models import CustomUser, Follow
-from .serializers import (PasswordChangeSerializer, SubscribedUserSerializer,
+from .models import Follow
+from .serializers import (PasswordChangeSerializer, SubscribedUserSerializer, SubscriptionSerializer,
                           UserSerializer)
+
+user = get_user_model()
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = CustomUser.objects.all()
+    queryset = user.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
     pagination_class = PageNumberPagination
 
     def create(self, request, *args, **kwargs):
         try:
-            user = CustomUser.objects.create_user(
+            new_user = user.objects.create_user(
                 first_name=request.data['first_name'],
                 last_name=request.data['last_name'],
                 email=request.data['email'],
                 username=request.data['username'],
                 password=request.data['password']
             )
-            serializer = UserSerializer(user)
+            serializer = UserSerializer(new_user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response(e, status=status.HTTP_400_BAD_REQUEST) 
+            return Response(e, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False,
             methods=['get'],
@@ -61,7 +63,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(['get'], detail=False, permission_classes=[IsAuthenticated])
     def subscriptions(self, request):
         subscriptions = request.user.follower.all().values_list('author')
-        queryset = CustomUser.objects.filter(id__in=subscriptions)
+        queryset = user.objects.filter(id__in=subscriptions)
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = SubscribedUserSerializer(
@@ -78,39 +80,30 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+# TODO
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def subscribe(request, id):
+    author = get_object_or_404(user, id=id)
     if request.method == 'GET':
-        author = get_object_or_404(CustomUser, id=id)
         if request.user != author:
-            if not Follow.objects.filter(
-                user=request.user,
-                author=author
-            ).exists():
-                Follow.objects.create(user=request.user,
-                                      author=author)
-                author = get_object_or_404(CustomUser, id=id)
+            serializer = SubscriptionSerializer(user=request.user,
+                                                author=author)
+            if serializer.is_valid():
+                serializer.save()
                 serializer = SubscribedUserSerializer(
                     author,
                     context={'request': request}
                 )
                 return Response(serializer.data,
                                 status=status.HTTP_201_CREATED)
-            return Response({'errors': 'Вы уже подписаны на этого автора!'},
-                            status=status.HTTP_400_BAD_REQUEST)
         return Response({'errors': 'Нельзя подписаться на самого себя!'},
                         status=status.HTTP_400_BAD_REQUEST)
     if request.method == 'DELETE':
-        author = get_object_or_404(CustomUser, id=id)
         if Follow.objects.filter(
-            user=request.user,
-            author=author
-        ).exists():
-            Follow.objects.filter(
                 user=request.user,
                 author=author
-            ).delete()
+        ).delete() != 0:
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response({'errors': 'Вы уже отписаны от этого автора!'},
                         status=status.HTTP_400_BAD_REQUEST)

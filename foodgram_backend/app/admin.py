@@ -25,17 +25,17 @@ class TagInlineAdmin(admin.TabularInline):
 
 
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'author', 'favorite_count')
+    list_display = ('name', 'author', 'favorites_count')
     search_fields = ('name', 'author', 'tags')
     inlines = [IngredientInlineAdmin, TagInlineAdmin]
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        return queryset.annotate(favorite_count=Count('favorited'))
+        return queryset.annotate(favorites_count=Count('favorited'))
 
     @staticmethod
-    def get_favorite_count(obj):
-        return obj.favorite_count
+    def get_favorites_count(obj):
+        return obj.annotate_favorites_count
 
 
 class RecipeIngredientAdmin(admin.ModelAdmin):

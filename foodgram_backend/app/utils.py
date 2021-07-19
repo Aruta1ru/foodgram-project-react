@@ -16,4 +16,5 @@ def pdf_create(products):
         amount = product['amount']
         measurement_unit = product['measurement_unit']
         pdf.cell(0, 10, txt=f'{name} - {amount} {measurement_unit}', ln=1)
-    pdf.output('media/shopping_cart.pdf')
+    #pdf.output('media/shopping_cart.pdf')
+    return pdf
