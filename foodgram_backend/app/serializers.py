@@ -109,8 +109,8 @@ class RecipeSerializer(serializers.ModelSerializer):
                                                    instance.cooking_time)
         instance.image = validated_data.get('image', instance.image)
         instance.save()
-        instance.recipe_ingredients.delete()
-        instance.recipe_tags.delete()
+        instance.recipe_ingredients.all().delete()
+        instance.recipe_tags.all().delete()
         self.add_recipe_ingredients(instance, ingredients_data)
         self.add_recipe_tags(instance, tags_data)
         return instance

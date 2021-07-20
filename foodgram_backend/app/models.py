@@ -98,11 +98,11 @@ class Recipe(models.Model):
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe,
                                on_delete=models.CASCADE,
-                               related_name='recipe_ingredient',
+                               related_name='recipe_ingredients',
                                verbose_name='Рецепт',)
     ingredient = models.ForeignKey(Ingredient,
                                    on_delete=models.CASCADE,
-                                   related_name='recipe_ingredient',
+                                   related_name='recipe_ingredients',
                                    verbose_name='Ингредиент')
     amount = models.PositiveIntegerField('Количество')
 
@@ -118,9 +118,11 @@ class RecipeIngredient(models.Model):
 class RecipeTag(models.Model):
     recipe = models.ForeignKey(Recipe,
                                on_delete=models.CASCADE,
+                               related_name='recipe_tags',
                                verbose_name='Рецепт')
     tag = models.ForeignKey(Tag,
                             on_delete=models.CASCADE,
+                            related_name='recipe_tags',
                             verbose_name='Тег')
 
     class Meta:
