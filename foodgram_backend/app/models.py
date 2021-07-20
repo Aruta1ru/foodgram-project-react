@@ -1,29 +1,30 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models.expressions import Value
 
 user = get_user_model()
 
 
 class RecipeManager(models.Manager):
-    def annotate_favorited_flag(self, request):
+    def annotate_favorited_flag(self, request, recipe):
         return self.annotate(
-            is_favorited=Favorite.objects.filter(
+            is_favorited=Value(Favorite.objects.filter(
                 user=request.user if request.user.is_authenticated else None,
-                recipe=self
-            ).exists()
+                recipe=recipe
+            ).exists())
         )
 
-    def annotate_in_shopping_cart_flag(self, request):
+    def annotate_in_shopping_cart_flag(self, request, recipe):
         return self.annotate(
-            is_in_shopping_cart=ShoppingCart.objects.filter(
+            is_in_shopping_cart=Value(ShoppingCart.objects.filter(
                 user=request.user if request.user.is_authenticated else None,
-                recipe=self
-            ).exists()
+                recipe=recipe
+            ).exists())
         )
 
-    def annotate_favorites_count(self):
+    def annotate_favorited_count(self, recipe):
         return self.annotate(
-            favorites_count=Favorite.objects.favorited.count()
+            favorited_count=Value(recipe.favorited.count())
         )
 
 

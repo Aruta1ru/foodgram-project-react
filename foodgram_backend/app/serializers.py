@@ -1,13 +1,13 @@
 import base64
-from foodgram_backend.app.models import Favorite, ShoppingCart
 import uuid
 
-from app.models import Ingredient, Recipe, RecipeIngredient, RecipeTag, Tag
+from app.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                        RecipeTag, ShoppingCart, Tag)
 from django.core.files.base import ContentFile
 from rest_framework import serializers
-from users.serializers import UserSerializer
-from rest_framework.fields import HiddenField, CurrentUserDefault
 from rest_framework.exceptions import ValidationError
+from rest_framework.fields import CurrentUserDefault, HiddenField
+from users.serializers import UserSerializer
 
 
 class Base64ImageField(serializers.ImageField):
@@ -64,11 +64,15 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def favorited_recipe(self, recipe):
         request = self.context.get('request')
-        return recipe.annotate_favorited_flag(request)
+        return Recipe.objects.annotate_favorited_flag(
+            request, recipe
+        ).get(id=recipe.id).is_favorited
 
     def in_shopping_cart(self, recipe):
         request = self.context.get('request')
-        return recipe.annotated_in_shopping_cart_flag(request)
+        return Recipe.objects.annotate_in_shopping_cart_flag(
+            request, recipe
+        ).get(id=recipe.id).is_in_shopping_cart
 
     def add_recipe_ingredients(self, recipe, ingredients_data):
         recipe_ingredients = (

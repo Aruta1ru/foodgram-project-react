@@ -1,30 +1,12 @@
-from app.serializers import RecipeCommonSerializer
 from django.contrib.auth import get_user_model
-from rest_framework.exceptions import ValidationError
-from rest_framework.fields import HiddenField, CurrentUserDefault
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+from rest_framework.fields import CurrentUserDefault, HiddenField
+from rest_framework.relations import PrimaryKeyRelatedField
 
 from .models import Follow
 
-user = get_user_model()
-
-
-def validate_author(data):
-    if data.get('author') == data.get('user'):
-        raise ValidationError(
-            'Нельзя подписаться на самого себя!'
-        )
-    return data
-
-
-def follow_already_exists(data):
-    if Follow.objects.filter(
-        user=data.get('user'),
-        author=data.get('author')
-    ).exists():
-        raise ValidationError(
-            'Вы уже подписаны на этого автора!'
-        )
+User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -36,25 +18,39 @@ class UserSerializer(serializers.ModelSerializer):
         if request and hasattr(request, 'user'):
             if request.user.is_authenticated:
                 user = request.user
-        return author.annotate_subscribed_flag(user)
+        return User.objects.annotate_subscribed_flag(
+            user, author
+        ).get(id=author.id).is_subscribed
 
     class Meta:
         fields = ('id', 'first_name', 'last_name',
                   'username', 'email', 'is_subscribed')
 
-        model = user
+        model = User
 
 
-class SubscriptionSerializer(serializers.ModelSerializer):
-    user = HiddenField(default=CurrentUserDefault())
-
+class SubscriptionWriteSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('author', 'user')
+        fields = ('id', 'author', 'user')
         model = Follow
-        validators = (validate_author, follow_already_exists)
+
+    def validate(self, data):
+        if data.get('author') == data.get('user'):
+            raise ValidationError(
+                'Нельзя подписаться на самого себя!'
+            )
+        if Follow.objects.filter(
+            user=data.get('user'),
+            author=data.get('author')
+        ).exists():
+            raise ValidationError(
+                'Вы уже подписаны на этого автора!'
+            )
+        return data
 
 
 class SubscribedUserSerializer(serializers.ModelSerializer):
+    from app.serializers import RecipeCommonSerializer
     is_subscribed = serializers.SerializerMethodField('user_subscribed')
     recipes_count = serializers.SerializerMethodField('get_recipes_count')
     recipes = RecipeCommonSerializer(many=True)
@@ -65,21 +61,25 @@ class SubscribedUserSerializer(serializers.ModelSerializer):
         if request and hasattr(request, 'user'):
             if request.user.is_authenticated:
                 user = request.user
-        return author.is_subscribed(user)
+        return User.objects.annotate_subscribed_flag(
+            user, author
+        ).get(id=author.id).is_subscribed
 
-    def get_recipes_count(self, author):
+    def get_recipes_count(self):
         user = None
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
             if request.user.is_authenticated:
                 user = request.user
-        return author.annotate_recipes_count(user)
+        return User.objects.annotate_recipes_count(
+            user
+        ).get(id=user.id).recipes_count
 
     class Meta:
         fields = ('id', 'first_name', 'last_name',
                   'username', 'email', 'is_subscribed',
                   'recipes', 'recipes_count')
-        model = user
+        model = User
 
 
 class PasswordChangeSerializer(serializers.Serializer):
