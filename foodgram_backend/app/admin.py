@@ -11,7 +11,7 @@ class IngredientAdmin(admin.ModelAdmin):
 
 
 class TagAdmin(admin.ModelAdmin):
-    prepopulated_fields = {"slug": ("name",)}
+    prepopulated_fields = {'slug': ('name',)}
     list_display = ('name', 'color', 'slug')
     search_fields = ('name',)
 
@@ -25,17 +25,19 @@ class TagInlineAdmin(admin.TabularInline):
 
 
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'author', 'favorite_count')
+    list_display = ('name', 'author', 'favorited_count')
     search_fields = ('name', 'author', 'tags')
     inlines = [IngredientInlineAdmin, TagInlineAdmin]
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        return queryset.annotate(favorite_count=Count('favorited'))
+        return queryset.annotate(favorited_count=Count('favorited'))
 
     @staticmethod
-    def get_favorite_count(obj):
-        return obj.favorite_count
+    def favorited_count(obj):
+        return Recipe.objects.annotate_favorited_count(obj).get(
+            id=obj.id
+        ).favorited_count
 
 
 class RecipeIngredientAdmin(admin.ModelAdmin):

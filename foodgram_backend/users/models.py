@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from django.db.models.expressions import Value
 
 
 class CustomAccountManager(BaseUserManager):
@@ -11,7 +12,6 @@ class CustomAccountManager(BaseUserManager):
             first_name=first_name,
             last_name=last_name,
         )
-        print('Password:', password)
         user.set_password(password)
         user.save()
         return user
@@ -31,6 +31,19 @@ class CustomAccountManager(BaseUserManager):
         user.role = user.ADMIN
         user.save()
         return user
+
+    def annotate_subscribed_flag(self, user, author):
+        return self.annotate(
+            is_subscribed=Value(Follow.objects.filter(
+                user=user,
+                author=author
+            ).exists())
+        )
+
+    def annotate_recipes_count(self, user):
+        return self.annotate(
+            recipes_count=Value(user.recipes.count())
+        )
 
 
 class CustomUser(AbstractUser):
@@ -74,15 +87,6 @@ class CustomUser(AbstractUser):
     def is_user_role(self):
         return self.role == self.USER
 
-    def is_subscribed(self, user):
-        return Follow.objects.filter(
-            user=user,
-            author=self
-        ).exists()
-
-    def recipes_count(self, user):
-        return user.recipes.count()
-
 
 class Follow(models.Model):
     user = models.ForeignKey(CustomUser,
@@ -94,9 +98,6 @@ class Follow(models.Model):
                                related_name='following',
                                verbose_name='Автор')
 
-    def __str__(self):
-        return f'{self.user.username} -> {self.author.username}'
-
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -106,3 +107,6 @@ class Follow(models.Model):
         ordering = ['user', 'author']
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
+
+    def __str__(self):
+        return f'{self.user.username} -> {self.author.username}'
