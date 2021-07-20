@@ -1,5 +1,3 @@
-from wsgiref.util import FileWrapper
-
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -44,8 +42,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(['get'], detail=False, permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_cart.pdf"'
+        )
         products = []
-        cart_recipes = request.user.shopping_cart.recipes.values_list('recipe')
+        cart_recipes = request.user.shopping_cart.values_list('recipe')
         recipes = RecipeIngredient.objects.filter(
             recipe_id__in=(cart_recipes)
         ).values(
@@ -59,29 +61,31 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
             product['amount'] = recipe['amount_sum']
             products.append(product)
-        report = pdf_create(products)
-        #short_report = open("media/shopping_cart.pdf", 'rb')
-        return HttpResponse(FileWrapper(report.output('shopping_cart.pdf')),
-                            content_type='application/pdf')
+        pdf = pdf_create(products)
+        response.write(pdf)
+        return response
 
     @action(
         ['get', 'delete'],
-        detail=False,
+        detail=True,
         permission_classes=[IsAuthenticated]
     )
-    def favorite(self, request, id):
-        recipe = get_object_or_404(Recipe, id=id)
+    def favorite(self, request, pk):
+        recipe = get_object_or_404(Recipe, id=pk)
         if request.method == 'GET':
-            favorite_serializer = FavoriteSerializer(user=request.user,
-                                                     recipe=recipe)
-            if favorite_serializer.is_valid():
-                favorite_serializer.save()
+            serializer = FavoriteSerializer(
+                data={'recipe': recipe.id, 'user': request.user.id}
+            )
+            if serializer.is_valid():
+                serializer.save()
                 recipe_serializer = RecipeSerializer(
                     recipe,
                     context={'request': request}
                 )
                 return Response(recipe_serializer.data,
                                 status=status.HTTP_201_CREATED)
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
         if request.method == 'DELETE':
             if Favorite.objects.filter(
                 user=request.user,
@@ -93,22 +97,25 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(
         ['get', 'delete'],
-        detail=False,
+        detail=True,
         permission_classes=[IsAuthenticated]
     )
-    def shopping_cart(self, request, id):
-        recipe = get_object_or_404(Recipe, id=id)
+    def shopping_cart(self, request, pk):
+        recipe = get_object_or_404(Recipe, id=pk)
         if request.method == 'GET':
-            cart_serializer = ShoppingCartSerializer(user=request.user,
-                                                     recipe=recipe)
-            if cart_serializer.is_valid():
-                cart_serializer.save()
+            serializer = ShoppingCartSerializer(
+                data={'recipe': recipe.id, 'user': request.user.id}
+            )
+            if serializer.is_valid():
+                serializer.save()
                 recipe_serializer = RecipeSerializer(
                     recipe,
                     context={'request': request}
                 )
                 return Response(recipe_serializer.data,
                                 status=status.HTTP_201_CREATED)
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
         if request.method == 'DELETE':
             if ShoppingCart.objects.filter(
                 user=request.user,

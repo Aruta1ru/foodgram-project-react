@@ -31,7 +31,10 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer = UserSerializer(new_user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(detail=False,
             methods=['get'],
@@ -87,16 +90,16 @@ class UserViewSet(viewsets.ModelViewSet):
     def subscribe(self, request, pk):
         author = get_object_or_404(User, id=pk)
         if request.method == 'GET':
-            # follow = Follow(author=author, user=request.user)
             serializer = SubscriptionWriteSerializer(
-                data={'author': author.id, 'user': request.user.id})
+                data={'author': author.id, 'user': request.user.id}
+            )
             if serializer.is_valid():
                 serializer.save()
-                serializer = SubscribedUserSerializer(
+                subscribed_serializer = SubscribedUserSerializer(
                     author,
                     context={'request': request}
                 )
-                return Response(serializer.data,
+                return Response(subscribed_serializer.data,
                                 status=status.HTTP_201_CREATED)
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)

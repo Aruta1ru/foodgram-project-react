@@ -6,7 +6,6 @@ from app.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.fields import CurrentUserDefault, HiddenField
 from users.serializers import UserSerializer
 
 
@@ -134,7 +133,9 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
-    user = HiddenField(default=CurrentUserDefault())
+    class Meta:
+        model = Favorite
+        fields = ('id', 'user', 'recipe')
 
     def validate(self, data):
         if Favorite.objects.filter(
@@ -142,16 +143,15 @@ class FavoriteSerializer(serializers.ModelSerializer):
             recipe=data.get('recipe')
         ).exists():
             raise ValidationError(
-                'Рецепт уже добавлен в избранное!'
+                'Вы уже добавили рецепт в избранное!'
             )
-
-    class Meta:
-        model = Favorite
-        fields = ('user', 'recipe')
+        return data
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):
-    user = HiddenField(default=CurrentUserDefault())
+    class Meta:
+        model = ShoppingCart
+        fields = ('id', 'user', 'recipe')
 
     def validate(self, data):
         if ShoppingCart.objects.filter(
@@ -159,9 +159,6 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
             recipe=data.get('recipe')
         ).exists():
             raise ValidationError(
-                'Рецепт уже добавлен в список покупок!'
+                'Вы уже добавили рецепт в список продуктов!'
             )
-
-    class Meta:
-        model = ShoppingCart
-        fields = ('user', 'recipe')
+        return data

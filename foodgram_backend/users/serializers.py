@@ -1,8 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.fields import CurrentUserDefault, HiddenField
-from rest_framework.relations import PrimaryKeyRelatedField
 
 from .models import Follow
 
@@ -65,15 +63,10 @@ class SubscribedUserSerializer(serializers.ModelSerializer):
             user, author
         ).get(id=author.id).is_subscribed
 
-    def get_recipes_count(self):
-        user = None
-        request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            if request.user.is_authenticated:
-                user = request.user
+    def get_recipes_count(self, author):
         return User.objects.annotate_recipes_count(
-            user
-        ).get(id=user.id).recipes_count
+            author
+        ).get(id=author.id).recipes_count
 
     class Meta:
         fields = ('id', 'first_name', 'last_name',
