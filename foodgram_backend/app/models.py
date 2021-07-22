@@ -1,30 +1,29 @@
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models.expressions import Value
+from django.db.models import Count
+from django.db.models.expressions import Exists
 
-user = get_user_model()
+User = get_user_model()
 
 
 class RecipeManager(models.Manager):
-    def annotate_favorited_flag(self, request, recipe):
+    def annotate_favorited_flag(self, user):
         return self.annotate(
-            is_favorited=Value(Favorite.objects.filter(
-                user=request.user if request.user.is_authenticated else None,
-                recipe=recipe
-            ).exists())
+            is_favorited=Exists(Favorite.objects.filter(
+                user=user if user.is_authenticated else None
+            ))
         )
 
-    def annotate_in_shopping_cart_flag(self, request, recipe):
+    def annotate_in_shopping_cart_flag(self, user):
         return self.annotate(
-            is_in_shopping_cart=Value(ShoppingCart.objects.filter(
-                user=request.user if request.user.is_authenticated else None,
-                recipe=recipe
-            ).exists())
+            is_in_shopping_cart=Exists(ShoppingCart.objects.filter(
+                user=user if user.is_authenticated else None
+            ))
         )
 
-    def annotate_favorited_count(self, recipe):
+    def annotate_favorited_count(self):
         return self.annotate(
-            favorited_count=Value(recipe.favorited.count())
+            favorited_count=Count('favorited')
         )
 
 
@@ -60,7 +59,7 @@ class Tag(models.Model):
 
 class Recipe(models.Model):
     author = models.ForeignKey(
-        user,
+        User,
         on_delete=models.PROTECT,
         related_name='recipes',
         verbose_name='Автор'
@@ -135,7 +134,7 @@ class RecipeTag(models.Model):
 
 
 class Favorite(models.Model):
-    user = models.ForeignKey(user,
+    user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
                              related_name='favorited',
                              verbose_name='Пользователь')
@@ -159,7 +158,7 @@ class Favorite(models.Model):
 
 
 class ShoppingCart(models.Model):
-    user = models.ForeignKey(user,
+    user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
                              related_name='shopping_cart',
                              verbose_name='Пользователь')

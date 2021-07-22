@@ -37,6 +37,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny, IsAuthorOrReadOnly]
     filterset_class = filters.RecipeFilter
 
+    def get_queryset(self):
+        favorited_queryset = Recipe.objects.annotate_favorited_flag(
+            self.request.user
+        )
+        shopping_cart_queryset = Recipe.objects.annotate_in_shopping_cart_flag(
+            self.request.user
+        )
+        return shopping_cart_queryset | favorited_queryset
+
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 

@@ -35,7 +35,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
     @staticmethod
     def favorited_count(obj):
-        return Recipe.objects.annotate_favorited_count(obj).get(
+        return Recipe.objects.annotate_favorited_count().get(
             id=obj.id
         ).favorited_count
 

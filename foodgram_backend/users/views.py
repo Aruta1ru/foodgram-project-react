@@ -8,33 +8,35 @@ from rest_framework.response import Response
 
 from .models import Follow
 from .serializers import (PasswordChangeSerializer, SubscribedUserSerializer,
-                          SubscriptionWriteSerializer, UserSerializer)
+                          SubscriptionWriteSerializer, UserCreateSerializer,
+                          UserSerializer)
 
 User = get_user_model()
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
     pagination_class = PageNumberPagination
 
-    def create(self, request, *args, **kwargs):
-        try:
-            new_user = User.objects.create_user(
-                first_name=request.data['first_name'],
-                last_name=request.data['last_name'],
-                email=request.data['email'],
-                username=request.data['username'],
-                password=request.data['password']
-            )
-            serializer = UserSerializer(new_user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+    def get_queryset(self):
+        queryset_subscribed = User.objects.annotate_subscribed_flag(
+            self.request.user
+        )
+        queryset_recipes_count = User.objects.annotate_recipes_count()
+        return queryset_subscribed | queryset_recipes_count
+
+    def create(self, request):
+        creation_serializer = UserCreateSerializer(
+            data=request.data
+        )
+        if creation_serializer.is_valid():
+            user = creation_serializer.save()
+            user_serializer = UserSerializer(user)
+            return Response(user_serializer.data,
+                            status=status.HTTP_201_CREATED)
+        return Response(creation_serializer.errors,
+                        status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False,
             methods=['get'],
@@ -46,15 +48,11 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(['post'], detail=False, permission_classes=[AllowAny])
     def set_password(self, request):
-        serializer = PasswordChangeSerializer(data=request.data)
+        serializer = PasswordChangeSerializer(
+            data=request.data,
+            context={'request': request}
+        )
         if serializer.is_valid():
-            current_password = serializer.data['current_password']
-            if not self.request.user.check_password(current_password):
-                return Response(
-                    {'current_password': 'Введенный пароль неправильный'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            serializer.is_valid(raise_exception=True)
             self.request.user.set_password(serializer.data['new_password'])
             self.request.user.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -65,8 +63,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(['get'], detail=False, permission_classes=[IsAuthenticated])
     def subscriptions(self, request):
-        subscriptions = request.user.follower.all().values_list('author')
-        queryset = User.objects.filter(id__in=subscriptions)
+        queryset = User.objects.filter(following__user=request.user)
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = SubscribedUserSerializer(

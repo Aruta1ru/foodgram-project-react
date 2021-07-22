@@ -8,23 +8,21 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-    is_subscribed = serializers.SerializerMethodField('user_subscribed')
-
-    def user_subscribed(self, author):
-        user = None
-        request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            if request.user.is_authenticated:
-                user = request.user
-        return User.objects.annotate_subscribed_flag(
-            user, author
-        ).get(id=author.id).is_subscribed
+    is_subscribed = serializers.BooleanField(default=False, read_only=True)
 
     class Meta:
         fields = ('id', 'first_name', 'last_name',
                   'username', 'email', 'is_subscribed')
-
         model = User
+
+
+class UserCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('first_name', 'last_name', 'username', 'password', 'email')
+        model = User
+
+    def create(self, validated_data):
+        return User.objects.create_user(**validated_data)
 
 
 class SubscriptionWriteSerializer(serializers.ModelSerializer):
@@ -49,32 +47,24 @@ class SubscriptionWriteSerializer(serializers.ModelSerializer):
 
 class SubscribedUserSerializer(serializers.ModelSerializer):
     from app.serializers import RecipeCommonSerializer
-    is_subscribed = serializers.SerializerMethodField('user_subscribed')
-    recipes_count = serializers.SerializerMethodField('get_recipes_count')
+    recipes_count = serializers.IntegerField(default=0)
     recipes = RecipeCommonSerializer(many=True)
-
-    def user_subscribed(self, author):
-        user = None
-        request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            if request.user.is_authenticated:
-                user = request.user
-        return User.objects.annotate_subscribed_flag(
-            user, author
-        ).get(id=author.id).is_subscribed
-
-    def get_recipes_count(self, author):
-        return User.objects.annotate_recipes_count(
-            author
-        ).get(id=author.id).recipes_count
 
     class Meta:
         fields = ('id', 'first_name', 'last_name',
-                  'username', 'email', 'is_subscribed',
-                  'recipes', 'recipes_count')
+                  'username', 'email', 'recipes', 'recipes_count')
         model = User
 
 
 class PasswordChangeSerializer(serializers.Serializer):
     new_password = serializers.CharField(style={'input_type': 'password'})
     current_password = serializers.CharField(style={'input_type': 'password'})
+
+    def validate(self, data):
+        if not self.context['request'].user.check_password(data.get(
+            'current_password'
+        )):
+            raise ValidationError(
+                'Введенный пароль неправильный!'
+            )
+        return data

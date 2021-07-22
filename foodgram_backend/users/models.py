@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
-from django.db.models.expressions import Value
+from django.db.models import Count
+from django.db.models.expressions import Exists
 
 
 class CustomAccountManager(BaseUserManager):
@@ -23,26 +24,23 @@ class CustomAccountManager(BaseUserManager):
             email=self.normalize_email(email),
             first_name=first_name,
             last_name=last_name,
+            is_superuser=True,
+            is_verified=True,
+            is_staff=True,
+            role=self.ADMIN
         )
         user.set_password(password)
-        user.is_superuser = True
-        user.is_verified = True
-        user.is_staff = True
-        user.role = user.ADMIN
         user.save()
         return user
 
-    def annotate_subscribed_flag(self, user, author):
+    def annotate_subscribed_flag(self, user):
         return self.annotate(
-            is_subscribed=Value(Follow.objects.filter(
-                user=user,
-                author=author
-            ).exists())
+            is_subscribed=Exists(Follow.objects.filter(user=user))
         )
 
-    def annotate_recipes_count(self, user):
+    def annotate_recipes_count(self):
         return self.annotate(
-            recipes_count=Value(user.recipes.count())
+            recipes_count=Count('recipes')
         )
 
 
