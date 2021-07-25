@@ -1,13 +1,13 @@
 import base64
 import uuid
 
+from app.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                        RecipeTag, ShoppingCart, Tag)
 from django.core.files.base import ContentFile
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
-from app.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                        RecipeTag, ShoppingCart, Tag)
 from users.serializers import UserSerializer
 
 
@@ -38,6 +38,14 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
         slug_field='measurement_unit',
         queryset=Ingredient.objects.all()
     )
+    amount = serializers.IntegerField(read_only=True)
+
+    def to_representation(self, instance):
+        data = IngredientSerializer(
+            instance,
+            context={'request': self.context.get('request')}
+        ).data
+        return data
 
     class Meta:
         fields = ('id', 'name', 'measurement_unit', 'amount')

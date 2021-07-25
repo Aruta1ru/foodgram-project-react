@@ -1,47 +1,7 @@
-from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.db.models import Count
-from django.db.models.expressions import Exists
 
-
-class CustomAccountManager(BaseUserManager):
-
-    def create_user(self, username, email, password, first_name, last_name):
-        user = self.model(
-            username=username,
-            email=self.normalize_email(email),
-            first_name=first_name,
-            last_name=last_name,
-        )
-        user.set_password(password)
-        user.save()
-        return user
-
-    def create_superuser(self, username, email,
-                         password, first_name, last_name):
-        user = self.model(
-            username=username,
-            email=self.normalize_email(email),
-            first_name=first_name,
-            last_name=last_name,
-            is_superuser=True,
-            is_verified=True,
-            is_staff=True,
-            role=self.ADMIN
-        )
-        user.set_password(password)
-        user.save()
-        return user
-
-    def annotate_subscribed_flag(self, user):
-        return self.annotate(
-            is_subscribed=Exists(Follow.objects.filter(user=user))
-        )
-
-    def annotate_recipes_count(self):
-        return self.annotate(
-            recipes_count=Count('recipes')
-        )
+from .managers import CustomAccountManager
 
 
 class CustomUser(AbstractUser):

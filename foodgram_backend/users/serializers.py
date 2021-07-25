@@ -47,7 +47,7 @@ class SubscriptionWriteSerializer(serializers.ModelSerializer):
 
 class SubscribedUserSerializer(serializers.ModelSerializer):
     from app.serializers import RecipeCommonSerializer
-    recipes_count = serializers.IntegerField(default=0)
+    recipes_count = serializers.IntegerField(read_only=True)
     recipes = RecipeCommonSerializer(many=True)
 
     class Meta:

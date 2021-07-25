@@ -20,11 +20,9 @@ class UserViewSet(viewsets.ModelViewSet):
     pagination_class = PageNumberPagination
 
     def get_queryset(self):
-        queryset_subscribed = User.objects.annotate_subscribed_flag(
+        return User.objects.annotate_subscribed_flag(
             self.request.user
-        )
-        queryset_recipes_count = User.objects.annotate_recipes_count()
-        return queryset_subscribed | queryset_recipes_count
+        ).annotate_recipes_count()
 
     def create(self, request):
         creation_serializer = UserCreateSerializer(
