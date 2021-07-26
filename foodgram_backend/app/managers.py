@@ -1,5 +1,4 @@
-from django.contrib.auth.models import BaseUserManager
-from django.db.models import Count, OuterRef
+from django.db.models import Count, OuterRef, Manager
 from django.db.models.expressions import Exists
 from django.db.models.query import QuerySet
 
@@ -29,5 +28,5 @@ class RecipeQueryset(QuerySet):
         )
 
 
-class RecipeManager(BaseUserManager.from_queryset(RecipeQueryset)):
+class RecipeManager(Manager.from_queryset(RecipeQueryset)):
     pass
