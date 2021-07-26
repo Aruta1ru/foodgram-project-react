@@ -8,6 +8,7 @@ services:
       - ./.env
       
   web:
+    build: ./
     image: aruta1ru/web:latest
     restart: always
     volumes:
@@ -19,6 +20,7 @@ services:
       - ./.env
 
   frontend:
+    build: ./
     image: aruta1ru/frontend:latest
     volumes:
       - ../frontend/:/app/result_build/
