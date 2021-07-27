@@ -29,23 +29,14 @@ class IngredientSerializer(serializers.ModelSerializer):
         model = Ingredient
 
 
-class RecipeIngredientSerializer(serializers.ModelSerializer):
+class RecipeIngredientSerializer(serializers.Serializer):
     id = serializers.PrimaryKeyRelatedField(source='ingredient',
                                             read_only=True)
-    name = serializers.SlugRelatedField(slug_field='name',
-                                        queryset=Ingredient.objects.all())
-    measurement_unit = serializers.SlugRelatedField(
-        slug_field='measurement_unit',
-        queryset=Ingredient.objects.all()
+    name = serializers.StringRelatedField(source='ingredient.name', many=False)
+    measurement_unit = serializers.StringRelatedField(
+        source='ingredient.measurement_unit', many=False
     )
-    amount = serializers.IntegerField(read_only=True)
-
-    def to_representation(self, instance):
-        data = IngredientSerializer(
-            instance,
-            context={'request': self.context.get('request')}
-        ).data
-        return data
+    amount = serializers.IntegerField(read_only=True) 
 
     class Meta:
         fields = ('id', 'name', 'measurement_unit', 'amount')
@@ -68,12 +59,12 @@ class RecipeCommonSerializer(serializers.ModelSerializer):
 
 class RecipeSerializer(serializers.ModelSerializer):
     author = UserSerializer(required=False)
-    ingredients = RecipeIngredientSerializer(many=True, read_only=True)
+    ingredients = RecipeIngredientSerializer(source='recipe_ingredients', many=True)
     is_favorited = serializers.BooleanField(default=False, read_only=True)
     is_in_shopping_cart = serializers.BooleanField(
         default=False, read_only=True
     )
-    tags = TagSerializer(many=True, read_only=True)
+    tags = TagSerializer(many=True)
     image = Base64ImageField()
 
     def add_recipe_ingredients(self, recipe, ingredients_data):
