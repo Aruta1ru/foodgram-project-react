@@ -20,7 +20,7 @@ services:
       - ./.env
 
   frontend:
-    image: aruta1ru/frontend:latest
+    image: aruta1ru/frontend:v1
     volumes:
       - result_build:/build
 
