@@ -36,7 +36,7 @@ class RecipeIngredientSerializer(serializers.Serializer):
     measurement_unit = serializers.StringRelatedField(
         source='ingredient.measurement_unit', many=False
     )
-    amount = serializers.IntegerField(read_only=True) 
+    amount = serializers.IntegerField(read_only=True)
 
     class Meta:
         fields = ('id', 'name', 'measurement_unit', 'amount')
@@ -59,7 +59,9 @@ class RecipeCommonSerializer(serializers.ModelSerializer):
 
 class RecipeSerializer(serializers.ModelSerializer):
     author = UserSerializer(required=False)
-    ingredients = RecipeIngredientSerializer(source='recipe_ingredients', many=True)
+    ingredients = RecipeIngredientSerializer(
+        source='recipe_ingredients', many=True
+    )
     is_favorited = serializers.BooleanField(default=False, read_only=True)
     is_in_shopping_cart = serializers.BooleanField(
         default=False, read_only=True
