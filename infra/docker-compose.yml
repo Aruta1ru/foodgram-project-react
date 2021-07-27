@@ -8,9 +8,6 @@ services:
       - ./.env
       
   web:
-    build:
-      context:  .
-      dockerfile:  ./foodgram_backend/Dockerfile
     image: aruta1ru/web:latest
     restart: always
     volumes:
@@ -22,8 +19,6 @@ services:
       - ./.env
 
   frontend:
-    context:  .
-      dockerfile:  ./frontend/Dockerfile
     image: aruta1ru/frontend:latest
     volumes:
       - ../frontend/:/app/result_build/
