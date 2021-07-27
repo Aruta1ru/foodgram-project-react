@@ -9,8 +9,8 @@ services:
       
   web:
     build:
-      dockerfile: Dockerfile
-      context: ../foodgram_backend/
+      context:  .
+      dockerfile:  ./foodgram_backend/Dockerfile
     image: aruta1ru/web:latest
     restart: always
     volumes:
@@ -22,9 +22,8 @@ services:
       - ./.env
 
   frontend:
-    build:
-      dockerfile: Dockerfile
-      context: ../frontend/
+    context:  .
+      dockerfile:  ./frontend/Dockerfile
     image: aruta1ru/frontend:latest
     volumes:
       - ../frontend/:/app/result_build/
