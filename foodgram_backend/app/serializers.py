@@ -66,7 +66,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     is_in_shopping_cart = serializers.BooleanField(
         default=False, read_only=True
     )
-    tags = TagSerializer(many=True)
+    tags = TagSerializer(many=True, read_only=True)
     image = Base64ImageField()
 
     def add_recipe_ingredients(self, recipe, ingredients_data):
