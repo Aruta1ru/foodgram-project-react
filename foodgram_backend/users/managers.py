@@ -9,7 +9,8 @@ class UserQueryset(QuerySet):
         from users.models import Follow
         return self.annotate(
             is_subscribed=Exists(Follow.objects.filter(
-                author=OuterRef('pk'), user=user)
+                author=OuterRef('pk'),
+                user=user if user.is_authenticated else None)
             )
         )
 
