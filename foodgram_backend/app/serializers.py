@@ -60,7 +60,7 @@ class RecipeCommonSerializer(serializers.ModelSerializer):
 class RecipeSerializer(serializers.ModelSerializer):
     author = UserSerializer(required=False)
     ingredients = RecipeIngredientSerializer(
-        source='recipe_ingredients', many=True
+        source='recipe_ingredients.set()', many=True
     )
     is_favorited = serializers.BooleanField(default=False, read_only=True)
     is_in_shopping_cart = serializers.BooleanField(
