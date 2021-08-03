@@ -1,7 +1,7 @@
 # foodgram-project-react
 
 ### Адрес сервера
-http://130.193.34.179/
+http://178.154.197.32/
 
 ### Учетные данные суперпользователя
 - email: djgraf95@gmail.com

@@ -91,6 +91,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         ingredients_data = request.data['ingredients']
         tags_data = request.data['tags']
+        validated_data.pop('recipe_ingredients')
         recipe = Recipe.objects.create(**validated_data)
         self.add_recipe_ingredients(recipe, ingredients_data)
         self.add_recipe_tags(recipe, tags_data)
