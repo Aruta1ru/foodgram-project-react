@@ -8,7 +8,7 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-    is_subscribed = serializers.BooleanField(default=False, read_only=True)
+    is_subscribed = serializers.BooleanField(read_only=True)
 
     class Meta:
         fields = ('id', 'first_name', 'last_name',

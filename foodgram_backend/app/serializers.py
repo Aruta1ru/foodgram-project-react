@@ -3,12 +3,16 @@ import uuid
 
 from app.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                         RecipeTag, ShoppingCart, Tag)
+from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.db import transaction
 from rest_framework import serializers
+from rest_framework.fields import SerializerMethodField
 from rest_framework.validators import UniqueTogetherValidator
 
 from users.serializers import UserSerializer
+
+User = get_user_model()
 
 
 class Base64ImageField(serializers.ImageField):
@@ -58,7 +62,7 @@ class RecipeCommonSerializer(serializers.ModelSerializer):
 
 
 class RecipeSerializer(serializers.ModelSerializer):
-    author = UserSerializer(required=False)
+    author = SerializerMethodField('get_recipe_author')
     ingredients = RecipeIngredientSerializer(
         source='recipe_ingredients', many=True
     )
@@ -68,6 +72,13 @@ class RecipeSerializer(serializers.ModelSerializer):
     )
     tags = TagSerializer(many=True, read_only=True)
     image = Base64ImageField()
+
+    def get_recipe_author(self, obj):
+        request = self.context.get('request')
+        author = User.objects.annotate_subscribed_flag(
+            request.user
+        ).get(id=obj.author.id)
+        return UserSerializer(instance=author).data
 
     def add_recipe_ingredients(self, recipe, ingredients_data):
         recipe_ingredients = (
@@ -90,6 +101,11 @@ class RecipeSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context.get('request')
         ingredients_data = request.data['ingredients']
+        for ingredient in ingredients_data:
+            if int(ingredient['amount']) < 0:
+                raise serializers.ValidationError(
+                    'Количество должно быть больше или равно 0!'
+                )
         tags_data = request.data['tags']
         validated_data.pop('recipe_ingredients')
         recipe = Recipe.objects.create(**validated_data)
@@ -101,6 +117,11 @@ class RecipeSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         request = self.context.get('request')
         ingredients_data = request.data['ingredients']
+        for ingredient in ingredients_data:
+            if int(ingredient['amount']) < 0:
+                raise serializers.ValidationError(
+                    'Количество должно быть больше или равно 0!'
+                )
         tags_data = request.data['tags']
         instance.name = validated_data.get('name', instance.name)
         instance.text = validated_data.get('text', instance.text)

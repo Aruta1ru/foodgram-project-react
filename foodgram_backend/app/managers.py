@@ -1,4 +1,4 @@
-from django.db.models import Count, OuterRef, Manager
+from django.db.models import Count, Manager, OuterRef
 from django.db.models.expressions import Exists
 from django.db.models.query import QuerySet
 
